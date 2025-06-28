@@ -1,46 +1,80 @@
-# devops-assignment
+# 🔧 Enhanced DevOps Assignment
 
 ## Objective
 
-Design, implement, and manage a CI/CD pipeline, deploy infrastructure using Infrastructure as Code (IaC), and ensure scalability and monitoring of the application.
+Build a production-grade infrastructure and CI/CD system for the FastAPI app that meets scalability, reliability, security, and observability needs.
 
-## Task Description
+## Application Setup
 
-### Application Setup
+Keep as-is:
 
-1. A basic FastAPI Application is already setup inside `app/main.py`
-2. Run pip install -r requirements.txt to install the dependencies
-3. Run `make run-server` on the terminal in the root directory of the project
-4. Ensure the application is available on port `8000`
+- FastAPI app lives in app/main.py
+- Use `make run-server` to run locally
 
-1. Use Terraform or another IaC tool to provision infrastructure on a cloud platform of choice (AWS, Azure, or Google Cloud).
-2. Include:
-   - K8S Cluster on 3 VMs
-   - Application containers using Docker
-   - Load balancer configuration and setup
+## 1. Infrastructure Details
 
-### CI/CD Pipeline
+- Deploy FastAPI app using Helm or Kubernetes manifests
+- Use separate namespaces for dev and prod
+- Add Nginx ingress controller with proper routing
+- Set up cert-manager with Let's Encrypt to auto-issue TLS certificates
 
-1. Set up a CI/CD pipeline using tools like Jenkins, GitHub Actions, or GitLab CI.
-2. Automate the following when a change is pushed:
-   - Code testing.
-   - Building the application.
-   - Deployment to the provisioned infrastructure.
+## 2. CI/CD
 
-### Monitoring & Logging
+Use GitHub Actions or GitLab CI to:
 
-1. Integrate a monitoring tool like Prometheus to track application performance.
+- Run tests (pytest)
+- Lint (flake8 or black)
+- Build and push Docker image to a container registry (e.g., GitHub Container Registry or ECR)
+- Deploy to Kubernetes via kubectl or Helm
+- Set up blue-green or canary deployments using Argo Rollouts or custom strategy
 
-### Scalability
+## 3. Monitoring & Observability
 
-1. Visualise how the infrastructure can scale horizontally or vertically based on traffic demands. You can show a high level design to show this.
+Integrate:
+
+- Prometheus for metrics
+- Grafana dashboards (pre-built FastAPI/uvicorn dashboard)
+- Loki for centralized logging
+- Kubernetes metrics-server for pod resource usage
+
+**Bonus:**
+
+- Set up alerts (Grafana + Slack webhook)
+
+## 4. Secrets & Configuration Management
+
+Use:
+
+- Sealed Secrets or HashiCorp Vault or K8s Secrets with encryption at rest
+- Externalized config with ConfigMap
+
+## 5. Security Best Practices
+
+- Scan Docker image with Trivy
+- Role-based access control (RBAC) on the K8s cluster
+
+## 6. Auto-Scaling
+
+- Document how the app can scale horizontally, no need to implement it
 
 ## Deliverables
 
-1. Source code for the application hosted on a Git repository.
-2. Terraform/IaC scripts for infrastructure provisioning.
-3. CI/CD pipeline configuration files.
-4. Documentation explaining:
-   - The architecture and setup process.
-   - Steps to scale the application.
-   - Monitoring strategy.
+GitHub Repo with:
+
+- Dockerfile
+- K8s manifests / Helm charts
+- .github/workflows/main.yml or similar CI/CD pipeline
+- Dashboard screenshots and alerts setup
+
+README with:
+
+- System architecture diagram
+- Deployment instructions
+- Monitoring and scaling strategy
+- Security measures in place
+
+## Stretch Goals (For Rockstar Impact)
+
+- Add a second microservice (maybe a /timezones API)
+- Use Service Mesh (e.g., Istio or Linkerd) for observability and mTLS
+- Implement GitOps with ArgoCD
