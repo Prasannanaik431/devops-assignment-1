@@ -21,7 +21,7 @@ Design and implement a production-grade continuous integration and continuous de
    - Use **GitHub Actions** OR **Jenkins** (chooses one)
    - Build step: install deps, run lint/static analysis
    - Test step: run unit tests and (optionally) integration tests
-   - Security step: dependency vulnerability scan (e.g., `dependabot`, `safety`, `npm audit`, `trivy`)
+   - Security step: vulnerability scan (`SonarQube`, `trivy`)
    - Build artifact: container image push to DockerHub (or GitHub Container Registry) with immutable tag (e.g., `sha256` or `gitsha`)
    - Optional: Build and publish package/artifact to artifact registry
 
@@ -35,9 +35,7 @@ Design and implement a production-grade continuous integration and continuous de
    - Protected branches and required status checks
    - Signed commits or enforced code owner reviews for critical paths (documented)
    - Use secrets management (GitHub Secrets or Jenkins Credentials) — no secrets in repo
-   - Infrastructure as Code (IaC) for infra or deployment manifests (Kubernetes manifests, Terraform, or Helm)
-   - Rollback mechanism (e.g., `kubectl rollout undo`, previous image tag)
-   - Observability hooks: deploy notifications (Slack/email), health checks, basic monitoring hooks (Prometheus/Grafana or alerts)
+   - Observability hooks: deploy notifications (email), health checks, basic monitoring hooks (Prometheus/Grafana or alerts)
    - Logging and error aggregation (recommendation: Loki/ELK)
 
 5. **Deliverables**
@@ -120,28 +118,19 @@ Design and implement a production-grade continuous integration and continuous de
 7. **Deployment**
    - Staging: auto-deploy on merge to `develop` or `staging`.
    - Production: manual approval job on semantic version tag.
-   - IaC: provide k8s manifests / Helm chart or Terraform.
+   - Assume k8s setup is already done and integrated with Argocd. Just update the image in deployment and sync through argocd
 
 8. **Observability & Alerts**
    - Post-deploy status notification (Email).
    - Health-check endpoints and liveness/readiness probes.
    - Basic dashboard or link to logs.
-
-9. **Rollback & Release Strategy**
-   - Implement rollbacks: use previous container tag or `kubectl rollout undo`.
-   - Provide runbook for emergency rollback.
-
-10. **Policy & Governance**
-   - Enforce code owners for specific dirs.
-   - Enforce signed commits or verified authors if required.
-
 ---
 
 ## Example Resources to include in your repo
 - `.github/workflows/ci-cd.yml` (example included)
 - `Jenkinsfile` (example included)
 - `Dockerfile`, `docker-compose.yml`
-- `k8s/` directory for manifests/helm chart
+- `k8s/` directory for manifests
 - `docs/` with architecture diagram and runbook
 - `tests/` with unit tests
 
