@@ -64,11 +64,11 @@ Design and implement a production-grade continuous integration and continuous de
 
 | Category        | Excellent (5) | Good (3) | Poor (1) |
 |-----------------|---------------|----------|----------|
-| Functionality   | Fully automated CI, staging + gated prod CD, rollback | CI passes, simple CD to staging only | Manual build, no CD |
+| Functionality   | Fully automated CI, staging + gated prod CD| CI passes, simple CD to staging only | Manual build, no CD |
 | Security        | Secrets, SAST, dependency scanning, signed artifacts | Some scanning + secrets in place | No scanning, secrets in repo |
-| Reliability     | Tests, retries, healthchecks, rollback | Basic tests present | No tests |
-| Reproducibility | Dockerized + IaC + clear README + one-click deploy | Dockerfile + README | Hard to run locally |
-| Documentation   | Architecture diagrams, step-by-step runbook | README present | Minimal docs |
+| Reliability     | Tests, retries, healthchecks | Basic tests present | No tests |
+| Reproducibility | Dockerized + clear README + one-click deploy | Dockerfile + README | Hard to run locally |
+| Documentation   | Architecture diagrams | README present | Minimal docs |
 
 ---
 
