@@ -127,8 +127,7 @@ Design and implement a production-grade continuous integration and continuous de
 ---
 
 ## Example Resources to include in your repo
-- `.github/workflows/ci-cd.yml` (example included)
-- `Jenkinsfile` (example included)
+- `.github/workflows/ci-cd.yml` (example included - if using github action)
 - `Dockerfile`, `docker-compose.yml`
 - `k8s/` directory for manifests
 - `docs/` with architecture diagram and runbook
