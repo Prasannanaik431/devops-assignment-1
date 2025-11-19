@@ -1,4 +1,4 @@
-# DevOps Engineer / AI Engineer Intern – Round 2 Assignment
+# DevOps Engineer – Round 2 Assignment
 
 ## Task Title
 **Build a CI/CD pipeline for a sample microservice / ML service using GitHub Actions or Jenkins (candidate's choice).**
@@ -134,15 +134,6 @@ Design and implement a production-grade continuous integration and continuous de
 10. **Policy & Governance**
    - Enforce code owners for specific dirs.
    - Enforce signed commits or verified authors if required.
-
----
-
-## Example timeline for deliverables (omit in grading; for candidate reference only)
-- Setup repo and CI config
-- Implement tests and lint
-- Containerize app and push images in CI
-- Implement staging CD and manual prod promotion
-
 
 ---
 
