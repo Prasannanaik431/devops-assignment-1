@@ -53,9 +53,8 @@ Design and implement a production-grade continuous integration and continuous de
 - Add acceptance tests / E2E tests
 - Deployment automation to Kubernetes cluster (Helm chart or k8s manifests)
 - Canary or blue/green deployment strategy implemented
-- SAST (e.g., semgrep) + DAST scan
+- SAST + DAST scan
 - Automated security scans and license checks
-- Add artifact signing (e.g., cosign) and image provenance
 - Unit tests and >= 80% coverage, with coverage report upload in CI
 
 ---
