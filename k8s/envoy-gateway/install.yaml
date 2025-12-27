@@ -1,0 +1,92 @@
+# =============================================================================
+# Envoy Gateway Installation
+# =============================================================================
+# This file contains the installation instructions for Envoy Gateway.
+# Envoy Gateway implements the Kubernetes Gateway API and provides
+# Layer-7 load balancing for the cluster.
+#
+# Installation steps:
+# 1. Install Gateway API CRDs:
+#    kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+#
+# 2. Install Envoy Gateway:
+#    helm install envoy-gateway oci://docker.io/envoyproxy/gateway-helm \
+#      --version v1.0.0 \
+#      --namespace envoy-gateway-system \
+#      --create-namespace
+#
+# 3. Apply the Gateway and GatewayClass resources below
+# =============================================================================
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: envoy-gateway
+spec:
+  controllerName: gateway.envoyproxy.io/gatewayclass-controller
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: envoy-gateway
+  namespace: envoy-gateway-system
+spec:
+  gatewayClassName: envoy-gateway
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+
+---
+# ReferenceGrant allows HTTPRoutes in other namespaces to reference
+# the Gateway in envoy-gateway-system namespace
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-dev-routes
+  namespace: envoy-gateway-system
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: dev
+  to:
+    - group: ""
+      kind: Service
+
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-stage-routes
+  namespace: envoy-gateway-system
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: stage
+  to:
+    - group: ""
+      kind: Service
+
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-prod-routes
+  namespace: envoy-gateway-system
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: prod
+  to:
+    - group: ""
+      kind: Service
+
+
