@@ -145,7 +145,7 @@ jobs:
     name: Deploy to Kubernetes
     runs-on: ubuntu-latest
     needs: [build, security-scan]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     environment:
       name: dev
     steps:
@@ -179,7 +179,7 @@ jobs:
         run: |
           cd k8s/overlays/${{ steps.env.outputs.OVERLAY }}
           # Update the image tag to the current commit SHA
-          kustomize edit set image prasannasn/fastapi-devops=${{ env.IMAGE_NAME }}:${{ github.sha }}
+          kustomize edit set image IMAGE_PLACEHOLDER=${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Deploy with Kustomize
         run: |
@@ -210,7 +210,7 @@ jobs:
     name: Verify Deployment
     runs-on: ubuntu-latest
     needs: deploy
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Set environment variables
         id: env

@@ -38,5 +38,5 @@ patches:
 
 images:
   - name: IMAGE_PLACEHOLDER
-    newName: prasannasn/fastapi-devops
+    newName: docker.io/prasannasn/fastapi-devops
     newTag: latest
