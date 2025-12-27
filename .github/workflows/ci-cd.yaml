@@ -8,9 +8,7 @@
 # - Kubernetes deployment via Kustomize
 #
 # Branch mapping:
-#   dev    -> dev namespace
-#   stage  -> stage namespace
-#   main   -> prod namespace
+#   prasanna -> dev namespace (for testing/development)
 #
 # Required Secrets:
 #   DOCKERHUB_USERNAME - Docker Hub username
@@ -22,9 +20,10 @@ name: CI-CD Pipeline
 
 on:
   push:
-    branches: [dev, stage, main]
+    branches: [prasanna]
   pull_request:
-    branches: [main]
+    branches: [prasanna]
+  workflow_dispatch:  # Allow manual trigger
 
 env:
   REGISTRY: docker.io
@@ -98,7 +97,7 @@ jobs:
           tags: |
             type=sha,prefix=
             type=ref,event=branch
-            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=latest
 
       - name: Build and push Docker image
         id: build-push
@@ -148,7 +147,7 @@ jobs:
     needs: [build, security-scan]
     if: github.event_name == 'push'
     environment:
-      name: ${{ github.ref_name == 'main' && 'prod' || github.ref_name }}
+      name: dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -156,13 +155,9 @@ jobs:
       - name: Set environment variables
         id: env
         run: |
-          if [ "${{ github.ref_name }}" == "main" ]; then
-            echo "NAMESPACE=prod" >> $GITHUB_OUTPUT
-            echo "OVERLAY=prod" >> $GITHUB_OUTPUT
-          else
-            echo "NAMESPACE=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "OVERLAY=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
+          # prasanna branch deploys to dev environment
+          echo "NAMESPACE=dev" >> $GITHUB_OUTPUT
+          echo "OVERLAY=dev" >> $GITHUB_OUTPUT
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
@@ -220,11 +215,7 @@ jobs:
       - name: Set environment variables
         id: env
         run: |
-          if [ "${{ github.ref_name }}" == "main" ]; then
-            echo "NAMESPACE=prod" >> $GITHUB_OUTPUT
-          else
-            echo "NAMESPACE=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-          fi
+          echo "NAMESPACE=dev" >> $GITHUB_OUTPUT
 
       - name: Configure kubeconfig
         run: |
