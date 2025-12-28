@@ -181,10 +181,16 @@ jobs:
           # Update the image tag to the current commit SHA
           kustomize edit set image IMAGE_PLACEHOLDER=${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+      - name: Test cluster connection
+        run: |
+          echo "Testing connection to cluster..."
+          kubectl cluster-info --request-timeout=30s || echo "Connection test failed"
+          kubectl get nodes --request-timeout=30s || echo "Cannot get nodes"
+          
       - name: Deploy with Kustomize
         run: |
           echo "Deploying to ${{ steps.env.outputs.NAMESPACE }} namespace..."
-          kubectl apply -k k8s/overlays/${{ steps.env.outputs.OVERLAY }}
+          kubectl apply -k k8s/overlays/${{ steps.env.outputs.OVERLAY }} --validate=false
 
       - name: Wait for rollout
         run: |

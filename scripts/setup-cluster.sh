@@ -108,3 +108,4 @@ echo "2. Wait for workers to join: kubectl get nodes"
 echo "3. Deploy the application stack"
 
 
+
