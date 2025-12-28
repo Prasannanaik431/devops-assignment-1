@@ -1,272 +1,209 @@
-# DevOps Assignment - FastAPI Kubernetes Deployment
+# FastAPI DevOps Assignment
 
-A complete DevOps workflow for deploying a containerized FastAPI application on a self-managed Kubernetes cluster using Infrastructure as Code (OpenTofu), CI/CD pipelines (GitHub Actions), and monitoring (Prometheus).
+A complete DevOps implementation featuring Infrastructure as Code, CI/CD pipeline, Kubernetes deployment, monitoring, and auto-scaling.
 
 ## 📋 Table of Contents
 
 - [Architecture Overview](#architecture-overview)
-- [Quick Start](#quick-start)
-- [Infrastructure Setup (OpenTofu)](#infrastructure-setup-opentofu)
-- [Kubernetes Cluster](#kubernetes-cluster)
-- [Application Deployment](#application-deployment)
+- [Infrastructure Setup](#infrastructure-setup)
 - [CI/CD Pipeline](#cicd-pipeline)
-- [Load Balancing](#load-balancing)
-- [Monitoring](#monitoring)
-- [Scaling](#scaling)
+- [Deployment Environments](#deployment-environments)
+- [Monitoring Strategy](#monitoring-strategy)
+- [Scalability](#scalability)
+- [Quick Start](#quick-start)
+
+---
 
 ## 🏗️ Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                     GitHub Actions CI/CD                        │
-│  ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────────┐  │
-│  │  Lint   │───▶│  Build  │───▶│  Scan   │───▶│   Deploy    │  │
-│  └─────────┘    └─────────┘    └─────────┘    └─────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                                       │
-                                       ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                    Kubernetes Cluster (3 VMs)                   │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │              Control Plane (devops-instance-1)          │   │
-│  │  ┌──────────┐ ┌──────────────┐ ┌──────────┐ ┌────────┐  │   │
-│  │  │ API      │ │ Controller   │ │Scheduler │ │ etcd   │  │   │
-│  │  │ Server   │ │ Manager      │ │          │ │        │  │   │
-│  │  └──────────┘ └──────────────┘ └──────────┘ └────────┘  │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                                                                 │
-│  ┌─────────────────────┐       ┌─────────────────────┐         │
-│  │ Worker Node 1       │       │ Worker Node 2       │         │
-│  │ (devops-instance-2) │       │ (devops-instance-3) │         │
-│  │  ┌─────────────┐    │       │  ┌─────────────┐    │         │
-│  │  │ FastAPI Pod │    │       │  │ FastAPI Pod │    │         │
-│  │  └─────────────┘    │       │  └─────────────┘    │         │
-│  └─────────────────────┘       └─────────────────────┘         │
-│                                                                 │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                   NodePort Service (30279)              │   │
-│  │                   Load Balancing Layer                  │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              ARCHITECTURE                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌─────────────┐     ┌─────────────┐     ┌─────────────────────────────┐   │
+│  │   GitHub    │────▶│  GitHub     │────▶│     Docker Hub              │   │
+│  │   (Code)    │     │  Actions    │     │  prasannasn/fastapi-devops  │   │
+│  └─────────────┘     └──────┬──────┘     └─────────────────────────────┘   │
+│                             │                                                │
+│                             ▼                                                │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │                    Kubernetes Cluster (3 VMs)                          │  │
+│  │  ┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐          │  │
+│  │  │ Control Plane   │ │  Worker Node 1  │ │  Worker Node 2  │          │  │
+│  │  │ (10.160.0.3)    │ │  (10.160.0.4)   │ │  (10.160.0.5)   │          │  │
+│  │  │                 │ │                 │ │                 │          │  │
+│  │  │ • API Server    │ │ • FastAPI Pods  │ │ • FastAPI Pods  │          │  │
+│  │  │ • etcd          │ │ • Flannel CNI   │ │ • Flannel CNI   │          │  │
+│  │  │ • Scheduler     │ │ • kube-proxy    │ │ • kube-proxy    │          │  │
+│  │  │ • Controller    │ │                 │ │                 │          │  │
+│  │  └─────────────────┘ └─────────────────┘ └─────────────────┘          │  │
+│  │                                                                        │  │
+│  │  Namespaces:                                                           │  │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌─────────────┐            │  │
+│  │  │   dev    │  │  stage   │  │   prod   │  │  monitoring │            │  │
+│  │  │ :30080   │  │ :30081   │  │ :30082   │  │   :30090    │            │  │
+│  │  │ 2 replicas│  │ 2 replicas│  │ 3 replicas│  │ Prometheus  │            │  │
+│  │  └──────────┘  └──────────┘  └──────────┘  └─────────────┘            │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 🚀 Quick Start
+---
+
+## 🔧 Infrastructure Setup
 
 ### Prerequisites
 
-- 3 Ubuntu VMs with SSH access
-- OpenTofu/Terraform installed locally
-- Docker installed locally
-- kubectl installed locally
+- Google Cloud Platform account
+- `gcloud` CLI configured
+- SSH key pair for VM access
+- OpenTofu/Terraform installed
 
-### 1. Clone and Configure
+### Infrastructure Components
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| IaC | OpenTofu | Infrastructure provisioning |
+| Container Runtime | containerd | Running containers |
+| Kubernetes | kubeadm v1.30 | Container orchestration |
+| CNI | Flannel | Pod networking |
+| Load Balancer | NodePort Services | Traffic distribution |
+
+### VM Configuration
+
+| VM | Role | Internal IP | External IP | Resources |
+|----|------|-------------|-------------|-----------|
+| devops-instance-1 | Control Plane | 10.160.0.3 | 34.14.169.168 | 2 vCPU, 4GB RAM |
+| devops-instance-2 | Worker Node | 10.160.0.4 | 34.100.156.67 | 2 vCPU, 4GB RAM |
+| devops-instance-3 | Worker Node | 10.160.0.5 | 34.14.213.230 | 2 vCPU, 4GB RAM |
+
+### OpenTofu Setup
 
 ```bash
-git clone <repository-url>
-cd devops-assignment
-
-# Update VM IPs in opentofu/variables.tf
-```
-
-### 2. Deploy Infrastructure with OpenTofu
-
-```bash
-cd opentofu
+cd opentofu/
 tofu init
+tofu plan
 tofu apply
 ```
 
-This will:
-- Install containerd and Kubernetes on all VMs
-- Initialize the control plane with kubeadm
-- Install Flannel CNI for pod networking
-- Join worker nodes to the cluster
-- Create dev, stage, and prod namespaces
-
-### 3. Deploy Application
-
-```bash
-# SSH to control plane
-ssh -i ~/.ssh/devops-assignment-prasanna prasanna@<CONTROL_PLANE_IP>
-
-# Deploy to dev namespace
-kubectl apply -f - <<EOF
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: fastapi
-  namespace: dev
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: fastapi
-  template:
-    metadata:
-      labels:
-        app: fastapi
-    spec:
-      containers:
-        - name: fastapi
-          image: prasannasn/fastapi-devops:latest
-          ports:
-            - containerPort: 8000
 ---
-apiVersion: v1
-kind: Service
-metadata:
-  name: fastapi-lb
-  namespace: dev
-spec:
-  type: NodePort
-  selector:
-    app: fastapi
-  ports:
-    - port: 80
-      targetPort: 8000
-EOF
-```
 
-## 📦 Infrastructure Setup (OpenTofu)
+## 🚀 CI/CD Pipeline
 
-### File Structure
+### Pipeline Stages
 
 ```
-opentofu/
-├── main.tf           # Main cluster provisioning
-├── variables.tf      # Configuration variables
-├── outputs.tf        # Output values
-└── provider.tf       # Provider configuration
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│ Code Quality │───▶│    Build     │───▶│   Security   │───▶│    Deploy    │
+│              │    │              │    │    Scan      │    │              │
+│ • flake8     │    │ • Docker     │    │ • Trivy      │    │ • kubectl    │
+│ • black      │    │ • Push to    │    │ • CVE check  │    │ • Rollout    │
+│ • isort      │    │   Docker Hub │    │              │    │ • Verify     │
+└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
 ```
 
-### Key Features
+### Branch to Environment Mapping
 
-- **Idempotent Provisioning**: Safe to re-run
-- **Complete Automation**: From bare VMs to running cluster
-- **Internal/External IP Handling**: Supports cloud VMs with NAT
+| Branch | Environment | Namespace | NodePort | Replicas |
+|--------|-------------|-----------|----------|----------|
+| `prasanna` | Development | dev | 30080 | 2 |
+| `stage` | Staging | stage | 30081 | 2 |
+| `main` | Production | prod | 30082 | 3 |
 
-### Variables
+### GitHub Actions Workflow
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `vm_external_ips` | External IPs for SSH access | See variables.tf |
-| `vm_internal_ips` | Internal IPs for cluster communication | See variables.tf |
-| `ssh_user` | SSH username | prasanna |
-| `ssh_key` | Path to SSH private key | ~/.ssh/devops-assignment-prasanna |
+Located at: `.github/workflows/ci-cd.yaml`
 
-## ⚙️ Kubernetes Cluster
+**Required Secrets:**
+- `DOCKERHUB_USERNAME` - Docker Hub username
+- `DOCKERHUB_TOKEN` - Docker Hub access token
+- `SSH_PRIVATE_KEY` - SSH private key for cluster access
+- `CONTROL_PLANE_IP` - Control plane external IP
 
-### Components
-
-- **Kubernetes Version**: 1.30.14
-- **Container Runtime**: containerd 2.1.3
-- **CNI**: Flannel (pod-network-cidr: 10.244.0.0/16)
-- **OS**: Ubuntu 25.10
-
-### Namespaces
-
-| Namespace | Purpose |
-|-----------|---------|
-| `dev` | Development environment |
-| `stage` | Staging environment |
-| `prod` | Production environment |
-
-## 🔄 CI/CD Pipeline
-
-### Workflow Overview
-
-```
-Push to branch → Code Quality → Build Image → Security Scan → Deploy → Verify
-```
-
-### Branch Mapping
-
-| Branch | Namespace | Environment |
-|--------|-----------|-------------|
-| `dev` | dev | Development |
-| `stage` | stage | Staging |
-| `main` | prod | Production |
-
-### Required Secrets
-
-Add these secrets to your GitHub repository:
-
-| Secret | Description |
-|--------|-------------|
-| `DOCKERHUB_USERNAME` | Docker Hub username |
-| `DOCKERHUB_TOKEN` | Docker Hub access token |
-| `KUBECONFIG` | Base64-encoded kubeconfig |
-
-### Generate KUBECONFIG Secret
+### Triggering Deployments
 
 ```bash
-./scripts/get-kubeconfig.sh
-# Copy the base64 output and add as KUBECONFIG secret in GitHub
+# Automatic: Push to branch
+git push origin prasanna  # Deploys to dev
+git push origin stage     # Deploys to staging
+git push origin main      # Deploys to production
+
+# Manual: Workflow dispatch
+# Go to Actions tab → Run workflow → Select environment
 ```
 
-## ⚖️ Load Balancing
+---
 
-The application uses Kubernetes **NodePort** service for load balancing:
+## 🌍 Deployment Environments
 
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: fastapi-lb
-spec:
-  type: NodePort
-  selector:
-    app: fastapi
-  ports:
-    - port: 80
-      targetPort: 8000
-      nodePort: 30279  # Automatically assigned
-```
+### Development (dev)
 
-Access the application via any node IP:
+- **Purpose**: Feature testing, debugging
+- **Replicas**: 2
+- **Resources**: 64Mi-256Mi memory, 50m-500m CPU
+- **Endpoint**: `http://<worker-ip>:30080`
 
-```bash
-curl http://<ANY_NODE_EXTERNAL_IP>:30279/
-```
+### Staging (stage)
 
-## 📊 Monitoring
+- **Purpose**: Pre-production testing, QA
+- **Replicas**: 2
+- **Resources**: 128Mi-256Mi memory, 100m-500m CPU
+- **Endpoint**: `http://<worker-ip>:30081`
+
+### Production (prod)
+
+- **Purpose**: Live traffic, end users
+- **Replicas**: 3 (auto-scales 2-10)
+- **Resources**: 128Mi-512Mi memory, 100m-1000m CPU
+- **Endpoint**: `http://<worker-ip>:30082`
+- **Features**: HPA enabled, Prometheus monitoring
+
+---
+
+## 📊 Monitoring Strategy
 
 ### Prometheus Setup
 
-Deploy Prometheus for monitoring:
-
-```bash
-kubectl apply -k k8s/monitoring/
-```
+- **Namespace**: monitoring
+- **NodePort**: 30090
+- **Scrape Interval**: 15s
 
 ### Metrics Collected
 
-- Kubernetes cluster health
-- Pod CPU and memory usage
-- Application availability
-- Request metrics (via annotations)
+| Metric Type | Source | Purpose |
+|-------------|--------|---------|
+| Application | FastAPI pods | Request latency, error rates |
+| Container | cAdvisor | CPU, memory, network |
+| Kubernetes | kube-state-metrics | Pod, deployment health |
 
-### Pod Annotations for Scraping
-
-```yaml
-annotations:
-  prometheus.io/scrape: "true"
-  prometheus.io/port: "8000"
-  prometheus.io/path: "/"
-```
-
-## 📈 Scaling
-
-### Horizontal Scaling
-
-Increase replicas via deployment:
+### Accessing Prometheus
 
 ```bash
-kubectl scale deployment fastapi -n dev --replicas=5
+# Via NodePort (if firewall allows)
+http://<worker-ip>:30090
+
+# Via kubectl port-forward
+kubectl port-forward -n monitoring svc/prometheus 9090:9090
+# Then access: http://localhost:9090
 ```
 
-Or with HPA (Horizontal Pod Autoscaler) in production:
+### Alerting (Future Enhancement)
+
+Configure AlertManager for:
+- High CPU/Memory usage (>80%)
+- Pod restart counts
+- Response time degradation
+- Service availability
+
+---
+
+## 📈 Scalability
+
+### Horizontal Pod Autoscaler (HPA)
+
+Production environment has HPA configured:
 
 ```yaml
 apiVersion: autoscaling/v2
@@ -278,8 +215,8 @@ spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: prod-fastapi
-  minReplicas: 3
+    name: fastapi
+  minReplicas: 2
   maxReplicas: 10
   metrics:
     - type: Resource
@@ -288,79 +225,163 @@ spec:
         target:
           type: Utilization
           averageUtilization: 70
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: 80
 ```
 
-### Vertical Scaling
+### Scaling Architecture
 
-Update VM resources via cloud provider and adjust pod resource limits in Kustomize overlays.
+```
+                    ┌─────────────────────────────────────────┐
+                    │           SCALING DIAGRAM               │
+                    └─────────────────────────────────────────┘
+
+   Traffic Increase                              Traffic Decrease
+         │                                              │
+         ▼                                              ▼
+┌─────────────────┐                          ┌─────────────────┐
+│  HPA Monitors   │                          │  HPA Monitors   │
+│  CPU/Memory     │                          │  CPU/Memory     │
+│  Metrics        │                          │  Metrics        │
+└────────┬────────┘                          └────────┬────────┘
+         │                                            │
+         ▼                                            ▼
+┌─────────────────┐                          ┌─────────────────┐
+│ CPU > 70% or    │                          │ CPU < 50% and   │
+│ Memory > 80%    │                          │ Memory < 60%    │
+└────────┬────────┘                          └────────┬────────┘
+         │                                            │
+         ▼                                            ▼
+┌─────────────────┐                          ┌─────────────────┐
+│  Scale UP       │                          │  Scale DOWN     │
+│  (max: 10 pods) │                          │  (min: 2 pods)  │
+└─────────────────┘                          └─────────────────┘
+
+Current: 3 pods ──────▶ High Load: 10 pods ──────▶ Low Load: 2 pods
+```
+
+### Manual Scaling
+
+```bash
+# Scale deployment manually
+kubectl scale deployment/fastapi -n prod --replicas=5
+
+# Check HPA status
+kubectl get hpa -n prod
+
+# Watch scaling in action
+kubectl get pods -n prod -w
+```
+
+### Vertical Scaling (Node Level)
+
+To add more worker nodes:
+
+1. Provision new VM with same specs
+2. Install kubeadm, kubelet, containerd
+3. Join cluster: `kubeadm join <control-plane>:6443 --token <token>`
+
+---
+
+## 🚀 Quick Start
+
+### 1. Run Application Locally
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run server
+make run-server
+# OR
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+
+# Access: http://localhost:8000
+```
+
+### 2. Build Docker Image
+
+```bash
+docker build -t prasannasn/fastapi-devops:latest .
+docker push prasannasn/fastapi-devops:latest
+```
+
+### 3. Deploy to Kubernetes
+
+```bash
+# Using kubectl
+kubectl apply -f k8s/overlays/dev/
+
+# Or trigger CI/CD
+git push origin prasanna
+```
+
+### 4. Verify Deployment
+
+```bash
+# Check pods
+kubectl get pods -A | grep fastapi
+
+# Test endpoints
+curl http://<worker-ip>:30080  # dev
+curl http://<worker-ip>:30081  # stage
+curl http://<worker-ip>:30082  # prod
+```
+
+---
 
 ## 📁 Project Structure
 
 ```
 devops-assignment/
-├── app/                          # FastAPI application code
-├── .github/
-│   └── workflows/
-│       └── ci-cd.yaml           # CI/CD pipeline
+├── app/
+│   └── main.py              # FastAPI application
 ├── k8s/
-│   ├── base/                    # Base Kubernetes manifests
+│   ├── base/                # Base Kubernetes manifests
 │   │   ├── deployment.yaml
 │   │   ├── service.yaml
 │   │   └── kustomization.yaml
-│   ├── overlays/                # Environment-specific configs
+│   ├── overlays/            # Environment-specific configs
 │   │   ├── dev/
 │   │   ├── stage/
 │   │   └── prod/
-│   ├── monitoring/              # Prometheus stack
-│   └── namespaces.yaml
-├── opentofu/                    # Infrastructure as Code
+│   └── monitoring/          # Prometheus configs
+├── opentofu/                # Infrastructure as Code
 │   ├── main.tf
 │   ├── variables.tf
 │   ├── outputs.tf
 │   └── provider.tf
-├── scripts/                     # Helper scripts
-│   └── get-kubeconfig.sh
-├── docs/                        # Documentation
-├── Dockerfile                   # Application container
-├── requirements.txt             # Python dependencies
+├── .github/
+│   └── workflows/
+│       └── ci-cd.yaml       # GitHub Actions pipeline
+├── Dockerfile
+├── requirements.txt
+├── Makefile
 └── README.md
 ```
 
-## 🔧 Troubleshooting
+---
 
-### Cluster Issues
+## 🔒 Security
 
-```bash
-# Check node status
-kubectl get nodes -o wide
+- Docker images scanned with Trivy
+- Non-root container execution
+- Resource limits on all pods
+- RBAC for Prometheus
+- SSH-based deployment (no exposed K8s API)
 
-# Check kube-system pods
-kubectl get pods -n kube-system
+---
 
-# Check kubelet logs
-sudo journalctl -u kubelet -f
-```
+## 📝 License
 
-### Pod Issues
+This project is for educational purposes as part of a DevOps assignment.
 
-```bash
-# Describe pod for events
-kubectl describe pod <pod-name> -n <namespace>
+---
 
-# Check logs
-kubectl logs <pod-name> -n <namespace>
-```
+## 👤 Author
 
-### CNI Issues
-
-```bash
-# Reset CNI on worker nodes
-sudo ip link delete cni0
-sudo ip link delete flannel.1
-sudo rm -rf /etc/cni/net.d/*
-sudo systemctl restart kubelet
-```
-
-## 📜 License
-
-This project is part of a DevOps assignment. All rights reserved.
+Prasanna Naik
